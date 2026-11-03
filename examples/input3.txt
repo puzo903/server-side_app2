@@ -1,0 +1,4 @@
+sample_rate: 22050
+channels: 1
+bitrate_kbps: 64
+duration_sec: 5.5
