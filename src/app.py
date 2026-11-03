@@ -35,7 +35,8 @@ def verify_auth(expected_user: str, expected_pwd: str) -> bool:
     auth_header = request.get_header("Authorization", "")
     if not auth_header.startswith(AUTH_HEADER_PREFIX):
         return False
-    encoded_token = auth_header[len(AUTH_HEADER_PREFIX):]
+    prefix_len = len(AUTH_HEADER_PREFIX)
+    encoded_token = auth_header[prefix_len:]
     try:
         decoded = base64.b64decode(encoded_token).decode("utf-8")
         user, pwd = decoded.split(":", 1)

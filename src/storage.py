@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS Member (
     created INTEGER NOT NULL,
     ip TEXT NOT NULL,
     user_agent TEXT NOT NULL
-);
+)
 """
 
 SQL_CREATE_INSTRUCTION = """
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS Instruction (
     description TEXT NOT NULL,
     state TEXT NOT NULL,
     FOREIGN KEY (member) REFERENCES Member(id)
-);
+)
 """
 
 SQL_CREATE_RESPONSE = """
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS Response (
     cache_hit INTEGER NOT NULL,
     duration INTEGER NOT NULL,
     FOREIGN KEY (instruction) REFERENCES Instruction(id)
-);
+)
 """
 
 SQL_INSERT_MEMBER = """
@@ -57,7 +57,7 @@ INSERT INTO Member (id, created, ip, user_agent)
 VALUES (?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     ip = excluded.ip,
-    user_agent = excluded.user_agent;
+    user_agent = excluded.user_agent
 """
 
 SQL_INSERT_INSTRUCTION = """
@@ -68,7 +68,7 @@ ON CONFLICT(id) DO UPDATE SET
     argument = excluded.argument,
     member = excluded.member,
     description = excluded.description,
-    state = excluded.state;
+    state = excluded.state
 """
 
 SQL_INSERT_RESPONSE = """
@@ -80,7 +80,7 @@ ON CONFLICT(id) DO UPDATE SET
     state = excluded.state,
     error = excluded.error,
     cache_hit = excluded.cache_hit,
-    duration = excluded.duration;
+    duration = excluded.duration
 """
 
 SQL_REPORT = """
@@ -93,7 +93,7 @@ FROM (
     FROM Instruction
     WHERE created >= ?
 ) AS Instruction
-RIGHT JOIN Response ON Instruction.id = Response.instruction;
+RIGHT JOIN Response ON Instruction.id = Response.instruction
 """
 
 
@@ -116,7 +116,7 @@ class SqliteStorage:
         """Create necessary database tables if they do not exist."""
         with self._lock:
             cur = self._conn.cursor()
-            cur.execute("PRAGMA foreign_keys = ON;")
+            cur.execute("PRAGMA foreign_keys = ON")
             cur.execute(SQL_CREATE_MEMBER)
             cur.execute(SQL_CREATE_INSTRUCTION)
             cur.execute(SQL_CREATE_RESPONSE)
@@ -126,9 +126,9 @@ class SqliteStorage:
         """Remove all rows from all tables."""
         with self._lock:
             cur = self._conn.cursor()
-            cur.execute("DELETE FROM Response;")
-            cur.execute("DELETE FROM Instruction;")
-            cur.execute("DELETE FROM Member;")
+            cur.execute("DELETE FROM Response")
+            cur.execute("DELETE FROM Instruction")
+            cur.execute("DELETE FROM Member")
             self._conn.commit()
 
     def store_member(
@@ -148,7 +148,7 @@ class SqliteStorage:
 
     def get_member(self, uid: int) -> dict[str, Any]:
         """Fetch single member by primary key identifier."""
-        query = "SELECT id, created, ip, user_agent FROM Member WHERE id = ?;"
+        query = "SELECT id, created, ip, user_agent FROM Member WHERE id = ?"
         with self._lock:
             cur = self._conn.cursor()
             cur.execute(query, (uid,))
@@ -157,7 +157,9 @@ class SqliteStorage:
 
     def show_members(self) -> list[dict[str, Any]]:
         """Retrieve all member entities."""
-        query = "SELECT id, created, ip, user_agent FROM Member ORDER BY id ASC;"
+        query = (
+            "SELECT id, created, ip, user_agent FROM Member ORDER BY id ASC"
+        )
         with self._lock:
             cur = self._conn.cursor()
             cur.execute(query)
@@ -174,7 +176,10 @@ class SqliteStorage:
                 clauses.append(f"{key} = ?")
                 vals.append(val)
         where_str = " AND ".join(clauses) if clauses else "1=1"
-        query = f"SELECT id, created, ip, user_agent " f"FROM Member WHERE {where_str};"
+        query = (
+            f"SELECT id, created, ip, user_agent "
+            f"FROM Member WHERE {where_str}"
+        )
         with self._lock:
             cur = self._conn.cursor()
             cur.execute(query, vals)
@@ -188,7 +193,7 @@ class SqliteStorage:
             return {}
         new_ip = data.get("ip", old["ip"])
         new_ua = data.get("user_agent", old["user_agent"])
-        query = "UPDATE Member SET ip = ?, user_agent = ? WHERE id = ?;"
+        query = "UPDATE Member SET ip = ?, user_agent = ? WHERE id = ?"
         with self._lock:
             cur = self._conn.cursor()
             cur.execute(query, (new_ip, new_ua, uid))
@@ -217,7 +222,7 @@ class SqliteStorage:
         """Fetch single instruction by primary key."""
         query = """
             SELECT id, created, argument, member, description, state
-            FROM Instruction WHERE id = ?;
+            FROM Instruction WHERE id = ?
         """
         with self._lock:
             cur = self._conn.cursor()
@@ -225,11 +230,13 @@ class SqliteStorage:
             row = cur.fetchone()
         return dict(row) if row is not None else {}
 
-    def show_instructions_by_member(self, member_id: int) -> list[dict[str, Any]]:
+    def show_instructions_by_member(
+        self, member_id: int
+    ) -> list[dict[str, Any]]:
         """Fetch all instructions belonging to a specific member."""
         query = """
             SELECT id, created, argument, member, description, state
-            FROM Instruction WHERE member = ? ORDER BY id ASC;
+            FROM Instruction WHERE member = ? ORDER BY id ASC
         """
         with self._lock:
             cur = self._conn.cursor()
@@ -237,7 +244,9 @@ class SqliteStorage:
             rows = cur.fetchall()
         return [dict(r) for r in rows]
 
-    def find_instructions(self, filters: dict[str, Any]) -> list[dict[str, Any]]:
+    def find_instructions(
+        self, filters: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         """Search instructions by arbitrary allowed parameters."""
         allowed = ("id", "argument", "member", "description", "state")
         clauses: list[str] = []
@@ -249,7 +258,7 @@ class SqliteStorage:
         where_str = " AND ".join(clauses) if clauses else "1=1"
         query = f"""
             SELECT id, created, argument, member, description, state
-            FROM Instruction WHERE {where_str};
+            FROM Instruction WHERE {where_str}
         """
         with self._lock:
             cur = self._conn.cursor()
@@ -257,7 +266,9 @@ class SqliteStorage:
             rows = cur.fetchall()
         return [dict(r) for r in rows]
 
-    def correct_instruction(self, iid: int, data: dict[str, Any]) -> dict[str, Any]:
+    def correct_instruction(
+        self, iid: int, data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Update fields of an existing instruction."""
         old = self.get_instruction(iid)
         if not old:
@@ -268,7 +279,7 @@ class SqliteStorage:
         query = """
             UPDATE Instruction
             SET argument = ?, description = ?, state = ?
-            WHERE id = ?;
+            WHERE id = ?
         """
         with self._lock:
             cur = self._conn.cursor()
@@ -305,7 +316,7 @@ class SqliteStorage:
         query = """
             SELECT id, created, response, state, error, instruction,
                    cache_hit, duration
-            FROM Response WHERE id = ?;
+            FROM Response WHERE id = ?
         """
         with self._lock:
             cur = self._conn.cursor()
@@ -320,7 +331,7 @@ class SqliteStorage:
         query = """
             SELECT id, created, response, state, error, instruction,
                    cache_hit, duration
-            FROM Response WHERE instruction = ? ORDER BY id ASC;
+            FROM Response WHERE instruction = ? ORDER BY id ASC
         """
         with self._lock:
             cur = self._conn.cursor()
@@ -349,7 +360,7 @@ class SqliteStorage:
         query = f"""
             SELECT id, created, response, state, error, instruction,
                    cache_hit, duration
-            FROM Response WHERE {where_str};
+            FROM Response WHERE {where_str}
         """
         with self._lock:
             cur = self._conn.cursor()
@@ -359,7 +370,7 @@ class SqliteStorage:
 
     def get_next_response_id(self) -> int:
         """Calculate next available primary key for response."""
-        query = "SELECT COALESCE(MAX(id), 0) FROM Response;"
+        query = "SELECT COALESCE(MAX(id), 0) FROM Response"
         with self._lock:
             cur = self._conn.cursor()
             cur.execute(query)

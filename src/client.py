@@ -39,7 +39,9 @@ class ApiClient:
         app: Bottle | None = None,
     ):
         """Configure client network target and Basic Auth credentials."""
-        default_url = f"http://{DEFAULT_SERVER_HOST}:{DEFAULT_SERVER_PORT}"
+        host_str = str(DEFAULT_SERVER_HOST)
+        port_str = str(DEFAULT_SERVER_PORT)
+        default_url = "http://" + host_str + ":" + port_str
         self.base_url = base_url if base_url is not None else default_url
         self.username = username
         self.password = password
@@ -48,7 +50,7 @@ class ApiClient:
 
     def _get_auth_header(self) -> str:
         """Construct RFC 7617 Authorization header value."""
-        raw = f"{self.username}:{self.password}".encode("utf-8")
+        raw = (self.username + ":" + self.password).encode("utf-8")
         token = base64.b64encode(raw).decode("utf-8")
         return f"{AUTH_HEADER_PREFIX}{token}"
 

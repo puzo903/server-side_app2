@@ -1,13 +1,15 @@
 """
 CLI utility for audio conversion: WAV to MP3 transcoder.
 
-Accepts an input audio file or configuration and outputs conversion results
-and compression metrics in JSON format to standard output.
+Accepts an input audio file or configuration, performs WAV to MP3
+transcoding via FFmpeg, and outputs conversion results and compression
+metrics in JSON format to standard output.
 """
 
 import json
 import math
 import os
+import subprocess
 import sys
 import wave
 from src.constants import (
@@ -21,6 +23,7 @@ from src.constants import (
     BITS_PER_KILOBIT,
     BYTES_PER_SAMPLE_16BIT,
     DEFAULT_DURATION_FLOAT,
+    DEFAULT_TIMEOUT,
     EXIT_FAILURE,
     EXIT_SUCCESS,
     FOUR_VAL,
@@ -86,21 +89,55 @@ def _validate_audio_params(data: dict) -> dict:
         "channels": chan,
         "bitrate_kbps": b_rate,
         "duration_sec": dur,
+        "output_file": data.get("output_file", ""),
     }
+
+
+def _transcode_wav_ffmpeg(
+    file_path: str, s_rate: int, chan: int, b_rate: int
+) -> str:
+    """Transcode binary WAV file to MP3 format via FFmpeg."""
+    base_path = os.path.splitext(file_path)[ZERO_VAL]
+    output_mp3 = f"{base_path}.mp3"
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-i",
+            file_path,
+            "-vn",
+            "-ar",
+            str(s_rate),
+            "-ac",
+            str(chan),
+            "-b:a",
+            f"{b_rate}k",
+            output_mp3,
+        ],
+        capture_output=True,
+        check=True,
+        timeout=DEFAULT_TIMEOUT,
+    )
+    return output_mp3
 
 
 def _read_wav_binary(file_path: str) -> dict:
     """Extract audio stream parameters from binary WAV header."""
     with wave.open(file_path, "rb") as wav_file:
         s_rate = wav_file.getframerate()
+        chan = wav_file.getnchannels()
         frames = wav_file.getnframes()
         dur = float(frames) / float(s_rate)
-        return {
-            "sample_rate": s_rate,
-            "channels": wav_file.getnchannels(),
-            "bitrate_kbps": MP3_DEFAULT_BITRATE_KBPS,
-            "duration_sec": dur,
-        }
+    output_mp3 = _transcode_wav_ffmpeg(
+        file_path, s_rate, chan, MP3_DEFAULT_BITRATE_KBPS
+    )
+    return {
+        "sample_rate": s_rate,
+        "channels": chan,
+        "bitrate_kbps": MP3_DEFAULT_BITRATE_KBPS,
+        "duration_sec": dur,
+        "output_file": output_mp3,
+    }
 
 
 def parse_audio_input(source: str) -> dict:
@@ -145,6 +182,7 @@ def convert_wav_to_mp3(params: dict) -> dict:
         "status": "SUCCESS",
         "source_format": "WAV",
         "target_format": "MP3",
+        "output_file": params.get("output_file", ""),
         "sample_rate_hz": s_rate,
         "channels": chan,
         "channel_mode": mode,

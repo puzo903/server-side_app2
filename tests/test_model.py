@@ -215,9 +215,7 @@ class ModelAPI(RuleBasedStateMachine):
     def correct_nonexistent_instruction(self):
         """Test correct instruction with unknown identifier."""
         non_id = 999999
-        res = self.client.correct_instruction(
-            non_id, {"description": "none"}
-        )
+        res = self.client.correct_instruction(non_id, {"description": "none"})
         assert self.client.last_status == HTTP_OK
         assert res == {}
 
@@ -338,17 +336,13 @@ class ModelAPI(RuleBasedStateMachine):
     @rule()
     def verify_real_subprocess_inline(self):
         """Verify real execution using inline input text."""
-        self._run_real_task(
-            "44100 1 128 5.0", "inline audio conversion"
-        )
+        self._run_real_task("44100 1 128 5.0", "inline audio conversion")
 
     @precondition(lambda self: len(self.model_members) > ZERO_VAL)
     @rule()
     def verify_real_subprocess_error(self):
         """Verify real execution with invalid input causing error."""
-        self._run_real_task(
-            "corrupted_audio_data", "failing audio conversion"
-        )
+        self._run_real_task("corrupted_audio_data", "failing audio conversion")
 
     @rule()
     def verify_cli_basic_execution(self):
@@ -358,10 +352,15 @@ class ModelAPI(RuleBasedStateMachine):
         from unittest.mock import patch
         import pytest
         from src.cli import run_cli
-        assert run_cli([]) == EXIT_FAILURE
-        assert run_cli(["src.cli", "examples/input1.txt"]) == EXIT_SUCCESS
-        assert run_cli(["src.cli", "examples/input2.txt"]) == EXIT_SUCCESS
-        assert run_cli(["src.cli", "nonexistent_file"]) == EXIT_FAILURE
+
+        standard_cases = (
+            ([], EXIT_FAILURE),
+            (["src.cli", "examples/input1.txt"], EXIT_SUCCESS),
+            (["src.cli", "examples/input2.txt"], EXIT_SUCCESS),
+            (["src.cli", "nonexistent_file"], EXIT_FAILURE),
+        )
+        for cmd_args, expected_code in standard_cases:
+            assert run_cli(cmd_args) == expected_code
 
         temp_wav = "temp_test_audio.wav"
         with wave.open(temp_wav, "wb") as wf:
@@ -374,32 +373,37 @@ class ModelAPI(RuleBasedStateMachine):
 
         import runpy
         import warnings
-        with warnings.catch_warnings():
+
+        with warnings.catch_warnings(), patch("sys.argv", ["src.cli"]):
             warnings.simplefilter("ignore", RuntimeWarning)
-            with patch("sys.argv", ["src.cli"]):
-                with pytest.raises(SystemExit):
-                    runpy.run_module("src.cli", run_name="__main__")
+            with pytest.raises(SystemExit):
+                runpy.run_module("src.cli", run_name="__main__")
 
     @rule()
     def verify_cli_validation_branches(self):
         """Verify CLI error paths and parsing branches."""
         from src.cli import run_cli
-        json_arg = (
-            '{"sample_rate": 44100, "channels": 1, "bitrate_kbps": 128}'
+
+        valid_cases = (
+            '{"sample_rate": 44100, "channels": 1, "bitrate_kbps": 128}',
+            "44100 1 128 1.0",
+            "sample_rate: 44100\n\nchannels: 1",
         )
-        assert run_cli(["src.cli", json_arg]) == EXIT_SUCCESS
-        space_arg = "44100 1 128 1.0"
-        assert run_cli(["src.cli", space_arg]) == EXIT_SUCCESS
-        blank_arg = "sample_rate: 44100\n\nchannels: 1"
-        assert run_cli(["src.cli", blank_arg]) == EXIT_SUCCESS
-        assert run_cli(["src.cli", "sample_rate: 100"]) == EXIT_FAILURE
-        assert run_cli(["src.cli", "sample_rate: 100000"]) == EXIT_FAILURE
-        assert run_cli(["src.cli", "channels: 0"]) == EXIT_FAILURE
-        assert run_cli(["src.cli", "channels: 5"]) == EXIT_FAILURE
-        assert run_cli(["src.cli", "bitrate_kbps: 10"]) == EXIT_FAILURE
-        assert run_cli(["src.cli", "bitrate_kbps: 500"]) == EXIT_FAILURE
-        assert run_cli(["src.cli", "duration_sec: 0.0001"]) == EXIT_FAILURE
-        assert run_cli(["src.cli", "duration_sec: 50000.0"]) == EXIT_FAILURE
+        for arg in valid_cases:
+            assert run_cli(["src.cli", arg]) == EXIT_SUCCESS
+
+        invalid_cases = (
+            "sample_rate: 100",
+            "sample_rate: 100000",
+            "channels: 0",
+            "channels: 5",
+            "bitrate_kbps: 10",
+            "bitrate_kbps: 500",
+            "duration_sec: 0.0001",
+            "duration_sec: 50000.0",
+        )
+        for arg in invalid_cases:
+            assert run_cli(["src.cli", arg]) == EXIT_FAILURE
 
     @rule()
     def check_nonexistent_queries(self):
