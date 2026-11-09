@@ -398,5 +398,3 @@ class SqliteStorage:
                 }
             )
         return result
-
-    get_report_formula18 = get_report

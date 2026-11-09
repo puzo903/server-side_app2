@@ -75,13 +75,13 @@ def _validate_audio_params(data: dict) -> dict:
     b_rate = int(data.get("bitrate_kbps", MP3_DEFAULT_BITRATE_KBPS))
     dur = float(data.get("duration_sec", DEFAULT_DURATION_FLOAT))
 
-    if s_rate < AUDIO_MIN_SAMPLE_RATE or s_rate > AUDIO_MAX_SAMPLE_RATE:
+    if not (AUDIO_MIN_SAMPLE_RATE <= s_rate <= AUDIO_MAX_SAMPLE_RATE):
         raise ValueError(f"Sample rate {s_rate} is out of boundary")
-    if chan < AUDIO_MIN_CHANNELS or chan > AUDIO_MAX_CHANNELS:
+    if not (AUDIO_MIN_CHANNELS <= chan <= AUDIO_MAX_CHANNELS):
         raise ValueError(f"Channels count {chan} is out of boundary")
-    if b_rate < MP3_MIN_BITRATE_KBPS or b_rate > MP3_MAX_BITRATE_KBPS:
+    if not (MP3_MIN_BITRATE_KBPS <= b_rate <= MP3_MAX_BITRATE_KBPS):
         raise ValueError(f"Bitrate {b_rate} is out of boundary")
-    if dur < MIN_DURATION_SEC or dur > MAX_DURATION_SEC:
+    if not (MIN_DURATION_SEC <= dur <= MAX_DURATION_SEC):
         raise ValueError(f"Duration {dur} is out of boundary")
 
     return {

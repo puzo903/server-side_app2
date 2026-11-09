@@ -6,6 +6,9 @@ __pycache__/
 .hypothesis/
 *.log
 *.db
+*.wav
+*.mp3
+commands.txt
 .idea/
 .vscode/
 .venv/
